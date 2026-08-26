@@ -1,6 +1,6 @@
-# k8s-test-1 — On-Prem Kubernetes Cluster + FastAPI Deployment
+# k8s-test: On-Prem Kubernetes Cluster + FastAPI Deployment
 
-A small FastAPI app, containerized and deployed to a self-managed, on-prem Kubernetes cluster built with `kubeadm`, `containerd`, and Flannel.
+A small FastAPI app, containerized & deployed to a self-managed, on-prem Kubernetes cluster built with `kubeadm`, `containerd`, and Flannel.
 
 ## Cluster Overview
 
