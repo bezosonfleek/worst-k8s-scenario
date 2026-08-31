@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - Install flake8
+      - name: Install flake8
         run: pip install flake8
 
       - name: Lint
