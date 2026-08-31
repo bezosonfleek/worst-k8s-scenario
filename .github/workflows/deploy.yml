@@ -7,11 +7,14 @@ on:
     branches: [main]
 
 jobs:
-  build-and-push: 
+  build-and-push:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - Install flake8
+        run: pip Install flake8
+        
       - name: Lint
-        run: flake8 app/ --exit-zero 
+        run: flake8 app/ --exit-zero
