@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@v4
 
       - Install flake8
-        run: pip Install flake8
-        
+        run: pip install flake8
+
       - name: Lint
         run: flake8 app/ --exit-zero
