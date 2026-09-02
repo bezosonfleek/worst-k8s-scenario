@@ -26,9 +26,9 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push image
-        if: github.event_name == 'push' && github.ref == 'refs/head/main'
-          uses: docker/build-push-action@v5
-          with:
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v5
+        with:
             context: .
             push: true
             tags: |
