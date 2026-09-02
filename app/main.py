@@ -21,7 +21,6 @@ class Task(BaseModel):
 class TaskOut(Task):
     id: int
 
-
 # In-memory store for now — swapped for a real DB later
 tasks: dict[int, Task] = {}
 next_id = 1
