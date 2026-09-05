@@ -3,6 +3,8 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*.*.*']
+
   pull_request:
     branches: [main]
 
@@ -19,7 +21,12 @@ jobs:
       - name: Lint
         run: flake8 app/ 
         
+      - Extract version from tag
+        id: version
+        if: startWith(github.ref, 'refs/tags/')
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT
       - name: Docker Login
+        if github.event_name == 'push'
         uses: docker/login-action@v3
         with: 
           username: ${{ secrets.DOCKER_USERNAME }}
@@ -34,3 +41,4 @@ jobs:
             tags: |
               ${{ secrets.DOCKER_USERNAME }}/k8s-test:latest
               ${{ secrets.DOCKER_USERNAME }}/k8s-test:${{ github.sha }}
+              ${{ steps.version.outputs.version && format('{0}/k8s-test:{1}', secrets.DOCKER_USERNAME, steps.version.outputs.version) || '' }}
