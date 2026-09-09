@@ -1,15 +1,14 @@
-FROM python:3.10-slim
+FROM python:3.12-slim
 
 WORKDIR /code
 
-RUN useradd --create-home --shell /bin/bash appuser && chown -R appuser:appuser /code
-
 COPY requirements.txt /code/requirements.txt
+RUN pip install --no-cache-dir -r /code/requirements.txt
 
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+COPY app /code/app
+COPY alembic /code/alembic
+COPY alembic.ini /code/alembic.ini
 
-COPY --chown=appuser:appuser ./app /code/app
+EXPOSE 8000
 
-USER appuser
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7777"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

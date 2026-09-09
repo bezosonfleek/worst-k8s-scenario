@@ -1,2 +1,6 @@
 venv/
 **/__pycache__/
+# Ignore secret environment files
+.env
+.env.*
+!.env.example
