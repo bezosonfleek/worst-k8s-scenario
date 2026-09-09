@@ -1,74 +1,54 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
-from enum import Enum
-import os
+import asyncio
+import contextlib
 
-app = FastAPI()
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-
-class Priority(str, Enum):
-    low = "low"
-    medium = "medium"
-    high = "high"
+from app.config import FRONTEND_ORIGINS
+from app.routers import users, items, bids, ws, fx
+from app.ws_manager import redis_listener
+from app.closer import auction_closer_loop
 
 
-class Task(BaseModel):
-    title: str = Field(min_length=1, max_length=100)
-    priority: Priority = Priority.medium
-    done: bool = False
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Two long-running background tasks for the whole app process:
+    # 1. redis_listener — bridges Redis pub/sub -> connected WebSocket clients
+    # 2. auction_closer_loop — periodically flips approved->live and closes
+    #    ended auctions (Phase 6)
+    listener_task = asyncio.create_task(redis_listener())
+    closer_task = asyncio.create_task(auction_closer_loop())
+    yield
+    listener_task.cancel()
+    closer_task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await listener_task
+    with contextlib.suppress(asyncio.CancelledError):
+        await closer_task
 
 
-class TaskOut(Task):
-    id: int
+app = FastAPI(title="PigaBid", version="0.2.0", lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=FRONTEND_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# In-memory store for now — swapped for a real DB later
-tasks: dict[int, Task] = {}
-next_id = 1
+app.include_router(users.router)
+app.include_router(items.router)
+app.include_router(bids.router)
+app.include_router(ws.router)
+app.include_router(fx.router)
 
 
 @app.get("/")
 def read_root():
-    return {"Hello": f"From: {os.environ.get('HOSTNAME', 'DEFAULT_ENV')}"}
+    return {"message": "PigaBid API is running"}
 
 
-@app.post("/tasks", response_model=TaskOut, status_code=201)
-def create_task(task: Task):
-    global next_id
-    task_id = next_id
-    tasks[task_id] = task
-    next_id += 1
-    return TaskOut(id=task_id, **task.model_dump())
-
-
-@app.get("/tasks", response_model=list[TaskOut])
-def list_tasks(done: bool | None = None):
-    results = [
-        TaskOut(id=tid, **t.model_dump())
-        for tid, t in tasks.items()
-        if done is None or t.done == done
-    ]
-    return results
-
-
-@app.get("/tasks/{task_id}", response_model=TaskOut)
-def get_task(task_id: int):
-    task = tasks.get(task_id)
-    if task is None:
-        raise HTTPException(status_code=404, detail="Task not found")
-    return TaskOut(id=task_id, **task.model_dump())
-
-
-@app.put("/tasks/{task_id}", response_model=TaskOut)
-def update_task(task_id: int, task: Task):
-    if task_id not in tasks:
-        raise HTTPException(status_code=404, detail="Task not found")
-    tasks[task_id] = task
-    return TaskOut(id=task_id, **task.model_dump())
-
-
-@app.delete("/tasks/{task_id}", status_code=204)
-def delete_task(task_id: int):
-    if task_id not in tasks:
-        raise HTTPException(status_code=404, detail="Task not found")
-    del tasks[task_id]
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
